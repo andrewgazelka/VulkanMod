@@ -61,9 +61,10 @@ public abstract class WindowMixin {
     private void vulkanHint(WindowEventHandler windowEventHandler, ScreenManager screenManager, DisplayData displayData, String string, String string2, CallbackInfo ci) {
         GLFW.glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-        //Fix Gnome Client-Side Decorators
-        boolean b = (Platform.isGnome() | Platform.isWeston() | Platform.isGeneric()) && Platform.isWayLand();
-        GLFW.glfwWindowHint(GLFW_DECORATED, (b ? GLFW_FALSE : GLFW_TRUE));
+        //Fix Gnome Client-Side Decorators; also disable decorations on macOS for borderless tiling WM support
+        boolean undecorated = ((Platform.isGnome() | Platform.isWeston() | Platform.isGeneric()) && Platform.isWayLand())
+                || Platform.isMacOS();
+        GLFW.glfwWindowHint(GLFW_DECORATED, (undecorated ? GLFW_FALSE : GLFW_TRUE));
     }
 
     @Inject(method = "<init>", at = @At(value = "RETURN"))
@@ -173,7 +174,10 @@ public abstract class WindowMixin {
             this.height = this.windowedHeight;
 
             GLFW.glfwSetWindowMonitor(this.handle, 0L, this.x, this.y, this.width, this.height, -1);
-            GLFW.glfwSetWindowAttrib(this.handle, GLFW_DECORATED, GLFW_TRUE);
+            // On macOS, keep window undecorated for borderless tiling WM support (e.g. AeroSpace)
+            if (!Platform.isMacOS()) {
+                GLFW.glfwSetWindowAttrib(this.handle, GLFW_DECORATED, GLFW_TRUE);
+            }
 
             this.wasOnFullscreen = false;
         }
